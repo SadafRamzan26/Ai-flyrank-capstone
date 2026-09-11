@@ -129,6 +129,35 @@ You can test both success and error states directly using the pre-configured sta
 
 ---
 
+## 🛡️ FE-08: Error States, Empty States & Edge Cases
+
+The chat interface implements robust systems-level resilience across edge cases:
+
+### 1. Polished Empty State (`ChatEmptyState.tsx`)
+- **Welcoming Experience**: Hero branding, value proposition, and categorized prompt cards.
+- **Instant One-Click Submit**: Clicking any suggestion fills the input and **immediately triggers generation** (`sendMessage`), avoiding redundant interactions.
+
+### 2. Zero-CLS Pending Skeletons (`MessageSkeleton.tsx`)
+- **Exact Geometry Match**: Identical padding (`px-3.5 py-3 sm:px-4 sm:py-3.5`), border radii (`rounded-2xl rounded-tl-sm`), max-widths, and avatar layout matching the assistant's real response bubble.
+- **Zero Layout Shifts**: Shimmering placeholders (`.skeleton-shimmer`) animate smoothly until the first stream token replaces them without bounding box jumps.
+
+### 3. Mid-Stream/API Errors & Targeted Retry (`InlineErrorBanner.tsx`)
+- **Graceful Inline Placement**: Renders directly within the message stream upon any upstream exception (e.g. HTTP 429 rate limit or network drop).
+- **Targeted Retry**: Features a dedicated "Retry Message" button that invokes `regenerate()`, re-attempting only the failed message without corrupting conversational state.
+
+### 4. Global Route Error Boundary (`src/app/error.tsx`)
+- Catches unhandled client-side runtime exceptions across the Next.js App Router.
+- Provides a designed recovery card with "Try Again" (`reset()`), "Reload Page", error digest display, and technical diagnostic telemetry.
+
+### 5. Mobile Safari Optimization
+- **Dynamic Viewport Height**: Uses `h-[100dvh]` to eliminate Mobile Safari URL/navigation bar overflow issues.
+- **Keyboard Handling**: Configures `interactiveWidget: 'resizes-content'` in `viewport` metadata to prevent virtual keyboard overlap.
+- **Zoom Prevention**: Input textarea uses `text-base sm:text-sm` (16px on mobile) to disable Mobile Safari's involuntary auto-zoom on focus.
+- **Touch Safe Area**: Pinned footer respects `env(safe-area-inset-bottom)` for iPhone home indicators.
+- **Overscroll Containment**: Messages container applies `overscroll-behavior-y: contain` to prevent rubber-band scroll conflicts.
+
+---
+
 ## 🏗️ Production Build Verification
 
 ```bash

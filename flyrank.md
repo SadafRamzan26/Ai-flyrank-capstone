@@ -84,3 +84,14 @@ Inside `src/components/StreamingChat.tsx`, all tool calls are tracked via typed 
 - **TypeScript Compilation**: `npx tsc --noEmit` passed with 0 errors.
 - **Production Build**: `npm run build` compiled all static and dynamic routes (`/` and `/api/chat`) successfully in Turbopack.
 - **Error Simulation**: Can be tested by invoking with company name containing `"error"` or `"fail"`, or passing `triggerError: true`.
+
+---
+
+## 4. FE-08: Error States, Empty States & Edge Cases
+
+- **Empty State (`ChatEmptyState.tsx`)**: Polished empty state with 4 categorized prompt cards that automatically fill and submit the message immediately.
+- **Zero-CLS Pending Skeleton (`MessageSkeleton.tsx`)**: Exact-geometry assistant skeleton with animated shimmers that smoothly transitions into real streamed tokens with zero layout shift.
+- **Mid-stream/API Errors & Targeted Retry (`InlineErrorBanner.tsx`)**: Graceful inline error UI featuring a targeted retry action (`regenerate()`) re-attempting only the failed message.
+- **Route Error Boundary (`src/app/error.tsx`)**: Global fallback UI with `reset()` recovery action, diagnostic stack inspection, and copy telemetry.
+- **Mobile Safari Responsiveness**: `100dvh` container, `interactiveWidget: "resizes-content"`, safe-area insets (`env(safe-area-inset-bottom)`), overscroll containment, and 16px mobile textarea font to prevent involuntary iOS auto-zoom.
+
