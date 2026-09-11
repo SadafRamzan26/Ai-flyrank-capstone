@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mine AI — Next.js Streaming Chat with Generative UI & Server Tools
 
-## Getting Started
+An enterprise-grade streaming AI chat application built with **Next.js 16 (App Router)**, **React 19**, **Tailwind CSS**, and the **Vercel AI SDK**. 
 
-First, run the development server:
+It features token-by-token text streaming, resilient controls, multi-step server-side tool calling, and structured Generative UI component rendering across all 4 tool lifecycle states with fluid 200ms crossfade transitions.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🛠️ Server-Side Tool Contract: `calculateLeadScore`
+
+The application exposes a server-side tool named `calculateLeadScore` designed for B2B qualification and revenue optimization. It runs securely within `/api/chat` using the Vercel AI SDK `tool` helper and is validated with `zod`.
+
+### 1. Tool Metadata
+- **Tool Name**: `calculateLeadScore`
+- **Location**: [`src/lib/ai/tools/lead-score.ts`](src/lib/ai/tools/lead-score.ts) & [`src/app/api/chat/route.ts`](src/app/api/chat/route.ts)
+- **Description**: *"Calculate lead score, tier qualification rating, deal size valuation, and strategic sales playbooks for a prospective B2B or enterprise client."*
+
+### 2. Zod Parameter Schema (`inputSchema`)
+
+```typescript
+import { z } from "zod";
+
+export const calculateLeadScoreSchema = z.object({
+  companyName: z
+    .string()
+    .min(1, "Company name is required")
+    .describe("The name of the prospective business or organization"),
+  companySize: z
+    .enum(["startup", "smb", "mid-market", "enterprise"])
+    .describe("Headcount scale of the company (startup: 1-20, smb: 21-100, mid-market: 101-500, enterprise: 500+)"),
+  monthlyBudget: z
+    .number()
+    .positive("Monthly budget must be a positive number")
+    .describe("Estimated monthly marketing or software budget in USD (e.g. 15000)"),
+  primaryGoal: z
+    .enum(["seo_growth", "ai_automation", "lead_generation", "performance_marketing"])
+    .describe("Primary business objective or campaign target"),
+  intentScore: z
+    .number()
+    .min(1)
+    .max(10)
+    .describe("Observed engagement/intent score from 1 (low curiosity) to 10 (urgent immediate need)"),
+  triggerError: z
+    .boolean()
+    .optional()
+    .describe("Flag to simulate upstream service failure for testing error lifecycle handling"),
+});
+
+export type CalculateLeadScoreInput = z.infer<typeof calculateLeadScoreSchema>;
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Structured Return Shape (`LeadScoreResult`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```typescript
+export interface LeadScoreResult {
+  companyName: string;
+  overallScore: number; // Composite score from 0 to 100
+  tier: "Tier 1: Hot Lead" | "Tier 2: High Potential" | "Tier 3: Nurture Track";
+  confidence: number; // Statistical confidence rating (e.g. 0.95)
+  status: "qualified" | "needs_review";
+  metrics: {
+    budgetFit: number; // 0 - 100 score based on budget thresholds
+    marketFit: number; // 0 - 100 score based on company scale
+    intentVelocity: number; // 0 - 100 score based on buyer intent
+    estimatedAnnualValueUsd: number; // Projected annual contract value
+  };
+  recommendation: {
+    action: string; // Executive priority action
+    suggestedPlaybook: string; // Tailored enterprise sales playbook
+    priorityResponseTime: string; // Inbound response SLA (e.g. "< 15 minutes")
+  };
+  keyHighlights: string[]; // Bulleted strategic factors
+  calculatedAt: string; // ISO 8601 timestamp
+}
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🎨 Client-Side Tool Lifecycle & Generative UI
 
-To learn more about Next.js, take a look at the following resources:
+Client rendering is managed inside [`src/components/StreamingChat.tsx`](src/components/StreamingChat.tsx) via typed tool parts streamed by `useChat()`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Transitions between all 4 states utilize a smooth **200ms CSS crossfade** (`tool-crossfade` utility) preventing layout jumps and morphing cleanly into the target component:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+[input-streaming] ──► [input-available] ──► [output-available] (<LeadScoreCard />)
+                                        └──► [output-error]     (<ToolErrorCard />)
+```
 
-## Deploy on Vercel
+| Lifecycle State | Description | Rendered Component / View |
+| :--- | :--- | :--- |
+| **`input-streaming`** | AI is actively formulating and streaming parameters | Animated gradient container with pulsing radar indicator & live streaming args chips |
+| **`input-available`** | Tool arguments confirmed; server execution in progress | High-tech glowing status card with spinning loader & confirmed payload badges |
+| **`output-available`** | Tool execution succeeded with structured data | `<LeadScoreCard />`: Radial qualification score badge, metric breakdown bars, actionable sales playbook banner, and copy button (no raw JSON dumps) |
+| **`output-error`** | Tool execution failed (e.g., timeout or invalid data) | `<ToolErrorCard />`: Explicit glassmorphic alert with failure reason, submitted parameters recap, resolution guidance, and diagnostic copy |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🚀 Getting Started
+
+### 1. Install Dependencies
+```bash
+npm install
+```
+
+### 2. Configure Environment Variables
+Ensure `.env.local` contains your OpenRouter API key:
+```env
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+### 3. Start Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🧪 Testing Tool Execution
+
+You can test both success and error states directly using the pre-configured starter prompt buttons in the chat UI or by typing:
+
+1. **Success State (`output-available`)**:
+   > *"Score lead for Tesla: enterprise size, $100,000 monthly budget, ai_automation goal, intent score 9"*
+
+2. **Error State (`output-error`)**:
+   > *"Test error lifecycle: Calculate lead score for ErrorCorp with fail trigger"*
+
+---
+
+## 🏗️ Production Build Verification
+
+```bash
+npm run build
+```
+Turbopack compiles the optimized production bundle with zero type or lint errors.
