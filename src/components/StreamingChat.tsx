@@ -42,7 +42,140 @@ import {
   RotateCcw,
   Trash2,
   AlertCircle,
+  Loader2,
+  Wrench,
 } from "lucide-react";
+import LeadScoreCard from "@/components/LeadScoreCard";
+import ToolErrorCard from "@/components/ToolErrorCard";
+import type { LeadScoreResult } from "@/lib/ai/tools/lead-score";
+
+// ── Helpers: Typed Tool Part Detection & Lifecycle ─────────────────────────
+function isToolPart(part: any): boolean {
+  if (!part || typeof part !== "object") return false;
+  return (
+    (typeof part.type === "string" && part.type.startsWith("tool-")) ||
+    part.type === "dynamic-tool"
+  );
+}
+
+function getPartToolName(part: any): string {
+  if (part.type === "dynamic-tool") return part.toolName || "tool";
+  if (typeof part.type === "string" && part.type.startsWith("tool-")) {
+    return part.type.replace(/^tool-/, "");
+  }
+  return "tool";
+}
+
+// ── Tool Lifecycle Renderer (All 4 States with 200ms Crossfade) ────────────
+function ToolLifecycleRenderer({ part }: { part: any }) {
+  const toolName = getPartToolName(part);
+  const state: "input-streaming" | "input-available" | "output-available" | "output-error" | string =
+    part.state;
+
+  switch (state) {
+    // 1. Input Streaming: AI is thinking/generating parameters
+    case "input-streaming":
+      return (
+        <div className="tool-crossfade w-full my-3 p-3.5 rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-950/30 via-zinc-950/80 to-zinc-900/80 shadow-lg backdrop-blur-md">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-500"></span>
+              </span>
+              <span className="text-xs font-semibold text-purple-200">
+                AI formulating parameters for{" "}
+                <span className="font-mono text-purple-300 font-bold">{toolName}</span>…
+              </span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-purple-500/15 text-purple-300 border border-purple-500/25">
+              input-streaming
+            </span>
+          </div>
+
+          {part.input && Object.keys(part.input).length > 0 && (
+            <div className="mt-2 text-[11px] font-mono text-zinc-300 bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800/80 flex flex-wrap gap-1.5 items-center">
+              <span className="text-zinc-500 text-[10px] uppercase font-sans font-semibold">Streaming Args:</span>
+              {Object.entries(part.input).map(([k, v]) => (
+                <span key={k} className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-purple-300 text-[10px]">
+                  {k}: <span className="text-zinc-200">{String(v)}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+
+    // 2. Input Available: Processing/Calling the tool on server
+    case "input-available":
+      return (
+        <div className="tool-crossfade w-full my-3 p-3.5 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/30 via-zinc-950/80 to-zinc-900/80 shadow-lg backdrop-blur-md">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2.5">
+              <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+              <span className="text-xs font-semibold text-indigo-200">
+                Executing server tool:{" "}
+                <span className="font-mono text-indigo-300 font-bold">{toolName}</span>
+              </span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-indigo-500/15 text-indigo-300 border border-indigo-500/25">
+              input-available
+            </span>
+          </div>
+
+          {part.input && (
+            <div className="mt-2 text-[11px] font-mono text-zinc-300 bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800/80 flex flex-wrap gap-1.5 items-center">
+              <span className="text-zinc-500 text-[10px] uppercase font-sans font-semibold">Confirmed Payload:</span>
+              {Object.entries(part.input).map(([k, v]) => (
+                <span key={k} className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-indigo-300 text-[10px]">
+                  {k}: <span className="text-zinc-200">{String(v)}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+
+    // 3. Output Available: Tool success -> Render sleek Generative UI component
+    case "output-available":
+      return (
+        <div className="tool-crossfade w-full">
+          {toolName === "calculateLeadScore" && part.output ? (
+            <LeadScoreCard data={part.output as LeadScoreResult} input={part.input} />
+          ) : (
+            <div className="my-3 p-4 rounded-2xl border border-emerald-500/30 bg-zinc-950/90 text-zinc-100 shadow-xl">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-emerald-400 font-mono">
+                  {toolName} Result
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  output-available
+                </span>
+              </div>
+              <pre className="text-xs font-mono text-zinc-300 overflow-x-auto p-2.5 bg-zinc-900/60 rounded-xl border border-zinc-800">
+                {JSON.stringify(part.output, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      );
+
+    // 4. Output Error: Tool execution failed -> Render explicit, graceful Error Component
+    case "output-error":
+      return (
+        <div className="tool-crossfade w-full">
+          <ToolErrorCard
+            toolName={toolName}
+            errorText={part.errorText}
+            input={part.input}
+          />
+        </div>
+      );
+
+    default:
+      return null;
+  }
+}
 
 // ── Helper: Extract text from AI SDK v7 UIMessage ─────────────────────────
 function getMessageText(message: UIMessage): string {
@@ -53,6 +186,38 @@ function getMessageText(message: UIMessage): string {
     .filter((part): part is { type: "text"; text: string } => part.type === "text")
     .map((part) => part.text)
     .join("");
+}
+
+// ── Helper: Render all message parts in sequence (Text & Tools) ───────────
+function MessageContent({ message }: { message: UIMessage }) {
+  if (!message.parts || !Array.isArray(message.parts) || message.parts.length === 0) {
+    const rawContent = (message as any).content || "";
+    return typeof rawContent === "string" ? (
+      <MemoMarkdown content={rawContent} />
+    ) : null;
+  }
+
+  return (
+    <div className="space-y-3 w-full">
+      {message.parts.map((part: any, index: number) => {
+        if (part.type === "text") {
+          if (!part.text) return null;
+          return <MemoMarkdown key={`text-${index}`} content={part.text} />;
+        }
+
+        if (isToolPart(part)) {
+          return (
+            <ToolLifecycleRenderer
+              key={part.toolCallId || `tool-${index}`}
+              part={part}
+            />
+          );
+        }
+
+        return null;
+      })}
+    </div>
+  );
 }
 
 // ── Helper: Make streaming markdown safe against unclosed code blocks ─────
@@ -237,10 +402,14 @@ export default function StreamingChat() {
   const lastMessage = messages[messages.length - 1];
   const lastMessageIsAssistant = lastMessage?.role === "assistant";
   const lastAssistantText = lastMessageIsAssistant ? getMessageText(lastMessage) : "";
+  const hasActiveTool =
+    lastMessageIsAssistant &&
+    lastMessage?.parts?.some((p: any) => isToolPart(p));
 
   const showThinking =
     status === "submitted" ||
-    (status === "streaming" && (!lastMessageIsAssistant || lastAssistantText.length === 0));
+    (status === "streaming" &&
+      (!lastMessageIsAssistant || (lastAssistantText.length === 0 && !hasActiveTool)));
 
   // ── Auto-scroll detection ──────────────────────────────────────────────
   const handleScroll = useCallback(() => {
@@ -398,10 +567,10 @@ export default function StreamingChat() {
             {/* Suggested Starter Prompts */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
               {[
-                "Explain what is debounce in 3 lines",
-                "Write a TypeScript debounce utility function",
-                "Compare Next.js Server Actions vs Route Handlers",
-                "Summarize key principles of clean system design",
+                "Score lead for Tesla: enterprise size, $100,000 monthly budget, ai_automation goal, intent score 9",
+                "Calculate lead score for Stripe: mid-market scale, $35k budget, performance_marketing, intent 8",
+                "Evaluate prospect: Startup Labs ($6,000 budget, startup scale, seo_growth, intent 7)",
+                "Test error lifecycle: Calculate lead score for ErrorCorp with fail trigger",
               ].map((promptText, idx) => (
                 <button
                   key={idx}
@@ -423,8 +592,9 @@ export default function StreamingChat() {
         {messages.map((m) => {
           const isUser = m.role === "user";
           const messageText = getMessageText(m);
+          const hasToolParts = m.parts?.some((p: any) => isToolPart(p));
 
-          if (!isUser && !messageText && showThinking) {
+          if (!isUser && !messageText && !hasToolParts && showThinking) {
             return null;
           }
 
@@ -442,7 +612,11 @@ export default function StreamingChat() {
               )}
 
               <div
-                className={`relative max-w-[88%] sm:max-w-[82%] px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+                className={`relative ${
+                  hasToolParts && !isUser
+                    ? "w-full max-w-[96%] sm:max-w-[92%]"
+                    : "max-w-[88%] sm:max-w-[82%]"
+                } px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                   isUser
                     ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-tr-sm shadow-md shadow-indigo-500/10 font-medium"
                     : "bg-zinc-900/90 border border-zinc-800 text-zinc-200 rounded-tl-sm shadow-sm"
@@ -451,8 +625,8 @@ export default function StreamingChat() {
                 {isUser ? (
                   <p className="whitespace-pre-wrap break-words">{messageText}</p>
                 ) : (
-                  <div className="prose-invert max-w-none break-words">
-                    <MemoMarkdown content={messageText} />
+                  <div className="prose-invert max-w-none break-words w-full">
+                    <MessageContent message={m} />
                   </div>
                 )}
               </div>
