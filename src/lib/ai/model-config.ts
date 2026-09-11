@@ -21,11 +21,11 @@ export const openrouter = createOpenAI({
 
 // ── Available Free-Tier Model Candidates ───────────────────────────────────
 // OpenRouter rotates free tiers periodically. We define prioritized active models
-// to ensure uninterrupted availability.
+// with verified tool-calling support to ensure uninterrupted availability.
 export const FREE_MODEL_CANDIDATES = [
-  process.env.AI_MODEL_ID || "minimax/minimax-m2.7:free",
-  "minimax/minimax-m3:free",
-  "nvidia/nemotron-3.5-lightning:free",
+  process.env.AI_MODEL_ID || "nvidia/nemotron-3.5-lightning:free",
+  "nex-agi/nex-n2.5-mini:free",
+  "google/gemma-4-31b-it:free",
   "liquid/lfm-2.5-2.6b:free",
 ] as const;
 
@@ -39,8 +39,14 @@ export function getModel(modelId: string = primaryModelId) {
 }
 
 // ── System Prompt ─────────────────────────────────────────────────────────
-// Defines the Mine AI persona, formatting rules, and guardrails.
-export const systemPrompt = `You are Mine AI, an intelligent, versatile AI assistant built for high-performance software engineering, clear explanations, and productive problem-solving.
+// Defines the Mine AI persona, formatting rules, tool execution, and guardrails.
+export const systemPrompt = `You are Mine AI, an intelligent, versatile AI assistant built for high-performance software engineering, growth analytics, and productive problem-solving.
+
+Capabilities & Tool Usage:
+• You have access to the server-side tool 'calculateLeadScore'.
+• Whenever a user asks to qualify a lead, calculate a lead score, analyze a sales prospect, or evaluate customer opportunity, YOU MUST call the 'calculateLeadScore' tool with relevant parameters.
+• If the user does not provide all exact parameters, make intelligent, realistic inferences based on their context (e.g. default companySize to 'smb' or 'mid-market', monthlyBudget to reasonable estimates like 10000, primaryGoal to 'lead_generation' or 'seo_growth', intentScore between 1-10).
+• After calling the tool, provide a concise executive summary highlighting key strategic insights and next steps.
 
 Guidelines:
 • Provide direct, clear, and well-structured answers using Markdown.
