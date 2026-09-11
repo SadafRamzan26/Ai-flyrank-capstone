@@ -67,9 +67,35 @@ body {
   }
 }
 
-.tool-crossfade {
-  animation: crossfade200 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition: opacity 200ms ease-out, transform 200ms ease-out, max-height 200ms ease-out;
-  will-change: opacity, transform;
+/* ── Zero-CLS Skeleton Shimmer Animation ───────────────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(39, 39, 42, 0.5) 0%,
+    rgba(63, 63, 70, 0.8) 50%,
+    rgba(39, 39, 42, 0.5) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite ease-in-out;
+}
+
+/* ── Mobile Safari & Touch Safe Area Enhancements ──────────────────────── */
+.safe-area-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+.overscroll-contain-y {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 

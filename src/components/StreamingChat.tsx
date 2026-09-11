@@ -47,6 +47,9 @@ import {
 } from "lucide-react";
 import LeadScoreCard from "@/components/LeadScoreCard";
 import ToolErrorCard from "@/components/ToolErrorCard";
+import ChatEmptyState from "@/components/ChatEmptyState";
+import MessageSkeleton from "@/components/MessageSkeleton";
+import InlineErrorBanner from "@/components/InlineErrorBanner";
 import type { LeadScoreResult } from "@/lib/ai/tools/lead-score";
 
 // ── Helpers: Typed Tool Part Detection & Lifecycle ─────────────────────────
@@ -367,25 +370,19 @@ const MemoMarkdown = React.memo(function MemoMarkdown({
   );
 });
 
-// ── Pulsing Thinking Indicator ────────────────────────────────────────────
-function ThinkingIndicator() {
-  return (
-    <div className="flex items-center gap-2.5 py-1 text-zinc-400">
-      <div className="flex items-center gap-1">
-        <span className="w-2 h-2 rounded-full bg-purple-400 animate-bounce [animation-delay:0ms]" />
-        <span className="w-2 h-2 rounded-full bg-purple-400 animate-bounce [animation-delay:150ms]" />
-        <span className="w-2 h-2 rounded-full bg-purple-400 animate-bounce [animation-delay:300ms]" />
-      </div>
-      <span className="text-xs sm:text-sm font-medium text-purple-300/90 animate-pulse">
-        Reasoning with Mine AI…
-      </span>
-    </div>
-  );
-}
 
 // ── Main StreamingChat Component ──────────────────────────────────────────
 export default function StreamingChat() {
-  const { messages, sendMessage, stop, status, error, setMessages, clearError } = useChat();
+  const {
+    messages,
+    sendMessage,
+    stop,
+    status,
+    error,
+    setMessages,
+    clearError,
+    regenerate,
+  } = useChat();
 
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -410,6 +407,51 @@ export default function StreamingChat() {
     status === "submitted" ||
     (status === "streaming" &&
       (!lastMessageIsAssistant || (lastAssistantText.length === 0 && !hasActiveTool)));
+
+  // ── Instant Suggestion Submission (Empty State) ────────────────────────
+  const handleSuggestionSubmit = useCallback(
+    async (promptText: string) => {
+      if (isGenerating) return;
+      setInput("");
+      if (clearError) clearError();
+      if (inputRef.current) {
+        inputRef.current.style.height = "auto";
+      }
+
+      setIsAtBottom(true);
+      setTimeout(() => scrollToBottom(true), 50);
+
+      try {
+        await sendMessage({ text: promptText });
+      } catch (err) {
+        console.error("Failed to send suggestion:", err);
+      }
+    },
+    [isGenerating, clearError, sendMessage]
+  );
+
+  // ── Targeted Message Retry (Failure Recovery) ─────────────────────────
+  const handleRetry = useCallback(async () => {
+    if (clearError) clearError();
+    setIsAtBottom(true);
+    setTimeout(() => scrollToBottom(true), 50);
+
+    if (regenerate) {
+      try {
+        await regenerate();
+        return;
+      } catch (err) {
+        console.warn("useChat regenerate failed, falling back to resend:", err);
+      }
+    }
+
+    // Fallback: target and re-send only the last failed user message
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    const lastText = lastUserMsg ? getMessageText(lastUserMsg) : "";
+    if (lastText) {
+      await sendMessage({ text: lastText });
+    }
+  }, [clearError, regenerate, messages, sendMessage]);
 
   // ── Auto-scroll detection ──────────────────────────────────────────────
   const handleScroll = useCallback(() => {
@@ -500,7 +542,7 @@ export default function StreamingChat() {
   }, [setMessages, clearError]);
 
   return (
-    <div className="flex flex-col h-dvh w-full max-w-4xl mx-auto bg-zinc-950 text-zinc-100 overflow-hidden font-sans border-x border-zinc-800/60 shadow-2xl">
+    <div className="flex flex-col h-[100dvh] max-h-[100dvh] w-full max-w-4xl mx-auto bg-zinc-950 text-zinc-100 overflow-hidden font-sans border-x border-zinc-800/60 shadow-2xl overscroll-none">
       {/* ── Top Navigation Bar ───────────────────────────────────────── */}
       <header className="flex-shrink-0 flex items-center justify-between px-3 sm:px-6 py-3 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center gap-2.5">
@@ -513,7 +555,7 @@ export default function StreamingChat() {
                 Mine AI
               </span>
               <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                MiniMax 2.7 • High Performance
+                Nemotron 3.5 • Tool-Calling Ready
               </span>
             </div>
             <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
@@ -544,48 +586,15 @@ export default function StreamingChat() {
         </div>
       </header>
 
-      {/* ── Messages Container ────────────────────────────────────────── */}
+      {/* ── Messages Container (Mobile Momentum & Overscroll Contained) ── */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-4 scroll-smooth scrollbar-thin scrollbar-thumb-zinc-800"
+        className="flex-1 overflow-y-auto overscroll-contain-y px-3 sm:px-6 py-4 space-y-4 scroll-smooth scrollbar-thin scrollbar-thumb-zinc-800"
       >
-        {/* Welcome Empty State */}
+        {/* Designed Empty State with Instant-Submit Suggestions */}
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 shadow-inner">
-              <Bot className="w-7 h-7 sm:w-8 sm:h-8 text-purple-400" />
-            </div>
-            <h2 className="text-lg sm:text-xl font-bold text-zinc-100 mb-1.5">
-              Mine AI — Streaming Chat
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-md mb-6 leading-relaxed">
-              Experience lightning-fast token streaming, resilient generation controls,
-              and safe markdown rendering powered by Mine AI.
-            </p>
-
-            {/* Suggested Starter Prompts */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
-              {[
-                "Score lead for Tesla: enterprise size, $100,000 monthly budget, ai_automation goal, intent score 9",
-                "Calculate lead score for Stripe: mid-market scale, $35k budget, performance_marketing, intent 8",
-                "Evaluate prospect: Startup Labs ($6,000 budget, startup scale, seo_growth, intent 7)",
-                "Test error lifecycle: Calculate lead score for ErrorCorp with fail trigger",
-              ].map((promptText, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setInput(promptText);
-                    inputRef.current?.focus();
-                  }}
-                  className="text-left text-xs text-zinc-300 p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 hover:border-purple-500/40 hover:bg-zinc-900 transition-all text-ellipsis overflow-hidden"
-                >
-                  &ldquo;{promptText}&rdquo;
-                </button>
-              ))}
-            </div>
-          </div>
+          <ChatEmptyState onSelectSuggestion={handleSuggestionSubmit} />
         )}
 
         {/* Message Stream */}
@@ -640,35 +649,20 @@ export default function StreamingChat() {
           );
         })}
 
-        {/* Thinking-to-token handoff indicator */}
+        {/* Zero-CLS Assistant Pending Skeleton */}
         {showThinking && (
-          <div className="flex gap-2.5 sm:gap-3.5 justify-start items-start animate-fade-in">
-            <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-purple-400 shadow-sm mt-0.5">
-              <Bot className="w-4 h-4" />
-            </div>
-            <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
-              <ThinkingIndicator />
-            </div>
+          <div className="w-full">
+            <MessageSkeleton />
           </div>
         )}
 
-        {/* Error notification */}
+        {/* Graceful Inline Error with Targeted Retry */}
         {error && (
-          <div className="flex items-center justify-between gap-2.5 max-w-md mx-auto p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs sm:text-sm">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
-              <span>{error.message || "Failed to generate response. Please try again."}</span>
-            </div>
-            {clearError && (
-              <button
-                type="button"
-                onClick={() => clearError()}
-                className="text-xs underline hover:text-white ml-2 flex-shrink-0"
-              >
-                Dismiss
-              </button>
-            )}
-          </div>
+          <InlineErrorBanner
+            error={error}
+            onRetry={handleRetry}
+            onDismiss={clearError}
+          />
         )}
 
         {/* Bottom scroll sentinel */}
@@ -690,8 +684,8 @@ export default function StreamingChat() {
         </div>
       )}
 
-      {/* ── Input Box & Controls ──────────────────────────────────────── */}
-      <footer className="flex-shrink-0 border-t border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md p-3 sm:p-4">
+      {/* ── Input Box & Controls (Mobile Safari Safe Area & Zoom-Proof) ─── */}
+      <footer className="flex-shrink-0 border-t border-zinc-800/80 bg-zinc-950/95 backdrop-blur-md p-3 sm:p-4 safe-area-bottom sticky bottom-0 z-20">
         <form onSubmit={handleSend} className="w-full">
           <div className="flex items-end gap-2 bg-zinc-900/90 border border-zinc-800 rounded-2xl p-1.5 sm:p-2 transition-all focus-within:border-purple-500/50 focus-within:ring-1 focus-within:ring-purple-500/20">
             <textarea
@@ -703,7 +697,7 @@ export default function StreamingChat() {
               onKeyDown={handleKeyDown}
               placeholder={isGenerating ? "Mine AI is generating…" : "Message Mine AI… (Enter to submit, Shift+Enter for newline)"}
               disabled={false}
-              className="flex-1 resize-none bg-transparent px-2.5 py-1.5 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-500 outline-none leading-relaxed max-h-40 min-h-[38px] scrollbar-thin scrollbar-thumb-zinc-700"
+              className="flex-1 resize-none bg-transparent px-2.5 py-1.5 text-base sm:text-sm text-zinc-100 placeholder:text-zinc-500 outline-none leading-relaxed max-h-40 min-h-[38px] scrollbar-thin scrollbar-thumb-zinc-700"
             />
 
             {/* Resilient Stop / Send Button */}
