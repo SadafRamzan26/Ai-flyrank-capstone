@@ -4,6 +4,10 @@ An enterprise-grade streaming AI chat application built with **Next.js 16 (App R
 
 It features token-by-token text streaming, resilient controls, multi-step server-side tool calling, and structured Generative UI component rendering across all 4 tool lifecycle states with fluid 200ms crossfade transitions.
 
+## FE-AA1: SmartButton Motion Contract
+
+`src/components/SmartButton.tsx` demonstrates an interruptible idle, loading, success, and error lifecycle. Loading uses a 240ms `cubic-bezier(0.22, 1, 0.36, 1)` slide for a quick, settled handoff; opacity uses 180ms for readable crossfades. The button keeps a stable outer footprint to avoid reflow while its content visually expands and contracts with compositor-only transforms. Success holds for 900ms before returning to idle. The default fake submit resolves after 650-1250ms and fails 20% of the time. Reduced-motion users retain color and state feedback while entrance slides and the error shake are removed.
+
 ---
 
 ## 🛠️ Server-Side Tool Contract: `calculateLeadScore`

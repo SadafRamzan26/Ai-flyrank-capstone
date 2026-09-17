@@ -50,6 +50,7 @@ import ToolErrorCard from "@/components/ToolErrorCard";
 import ChatEmptyState from "@/components/ChatEmptyState";
 import MessageSkeleton from "@/components/MessageSkeleton";
 import InlineErrorBanner from "@/components/InlineErrorBanner";
+import SmartButton from "@/components/SmartButton";
 import type { LeadScoreResult } from "@/lib/ai/tools/lead-score";
 
 // ── Helpers: Typed Tool Part Detection & Lifecycle ─────────────────────────
@@ -712,15 +713,11 @@ export default function StreamingChat() {
                 <Square className="w-3.5 h-3.5 fill-white" />
               </button>
             ) : (
-              <button
-                type="submit"
+              <SmartButton
                 disabled={!input.trim()}
-                className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:pointer-events-none shadow-md shadow-indigo-500/20"
-                title="Send message"
-                aria-label="Send message"
-              >
-                <SendHorizonal className="w-4 h-4" />
-              </button>
+                onSubmit={handleSend}
+                className="flex-shrink-0 w-10 sm:w-10 h-10 rounded-xl px-0"
+              />
             )}
           </div>
 

@@ -98,4 +98,153 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* SmartButton keeps its footprint stable and choreographs content on the compositor. */
+.smart-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 4.5rem;
+  min-width: 4.5rem;
+  height: 3.5rem;
+  padding: 0.25rem;
+  overflow: visible;
+  border: 0;
+  border-radius: 999px;
+  background: #202124;
+  color: white;
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+  cursor: pointer;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.smart-button:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.3);
+}
+
+.smart-button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.smart-button:focus-visible {
+  outline: 3px solid #fbbf24;
+  outline-offset: 3px;
+}
+
+.smart-button:disabled {
+  cursor: wait;
+}
+
+.smart-button--success {
+  background: #059669;
+  border-color: rgba(110, 231, 183, 0.65);
+}
+
+.smart-button--error {
+  background: #b91c1c;
+  border-color: rgba(252, 165, 165, 0.7);
+  animation: smart-button-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.smart-button__content {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  transform: scaleX(1);
+  transform-origin: center;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.smart-button__label,
+.smart-button__spinner,
+.smart-button__check,
+.smart-button__retry {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+}
+
+.smart-button__label { transform: translateX(0); opacity: 1; }
+.smart-button__spinner { transform: translateX(2.5rem); opacity: 0; }
+.smart-button__check { transform: scale(0.65); opacity: 0; }
+.smart-button__retry { transform: translateX(-2.5rem); opacity: 0; }
+
+.smart-button__content[data-state="idle"] .smart-button__label { transform: translateX(-2.5rem); opacity: 0; }
+.smart-button__content[data-state="loading"] .smart-button__label { transform: translateX(-2.5rem); opacity: 0; }
+.smart-button__content[data-state="loading"] .smart-button__spinner { transform: translateX(0); opacity: 1; }
+.smart-button__content[data-state="loading"] { transform: scaleX(0.62); }
+.smart-button__content[data-state="success"] .smart-button__label { transform: translateX(-2.5rem); opacity: 0; }
+.smart-button__content[data-state="success"] .smart-button__check { transform: scale(1); opacity: 1; }
+.smart-button__content[data-state="success"] { transform: scaleX(0.62); }
+.smart-button__content[data-state="error"] .smart-button__label { transform: translateX(2.5rem); opacity: 0; }
+.smart-button__content[data-state="error"] .smart-button__retry { transform: translateX(0); opacity: 1; }
+.smart-button__content[data-state="error"] { transform: scaleX(0.72); }
+
+.smart-button__icon { width: 1rem; height: 1rem; }
+.smart-button__icon--spin { animation: smart-button-spin 800ms linear infinite; }
+.smart-button__send { width: 1rem; height: 1rem; }
+.smart-button__send {
+  width: 3rem;
+  height: 3rem;
+  padding: 0.72rem;
+  border-radius: 999px;
+  background: #3155c9;
+  color: white;
+}
+
+.smart-button__tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: 0.45rem;
+  background: #18181b;
+  color: #f4f4f5;
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.smart-button:hover .smart-button__tooltip,
+.smart-button:focus-visible .smart-button__tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes smart-button-spin { to { transform: rotate(360deg); } }
+@keyframes smart-button-shake {
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smart-button,
+  .smart-button__label,
+  .smart-button__spinner,
+  .smart-button__check,
+  .smart-button__retry,
+  .smart-button__content,
+  .smart-button__tooltip {
+    transition: none;
+  }
+
+  .smart-button--error { animation: none; }
+  .smart-button__icon--spin { animation-duration: 1.6s; }
+}
+
 
