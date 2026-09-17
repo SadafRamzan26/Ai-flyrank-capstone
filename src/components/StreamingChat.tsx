@@ -545,7 +545,8 @@ export default function StreamingChat() {
   return (
     <div className="flex flex-col h-[100dvh] max-h-[100dvh] w-full max-w-4xl mx-auto bg-zinc-950 text-zinc-100 overflow-hidden font-sans border-x border-zinc-800/60 shadow-2xl overscroll-none">
       {/* ── Top Navigation Bar ───────────────────────────────────────── */}
-      <header className="flex-shrink-0 flex items-center justify-between px-3 sm:px-6 py-3 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-20">
+      <header className="flex-shrink-0 px-3 sm:px-6 py-3 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-20">
+        <nav aria-label="Chat navigation" className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/20">
             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -585,12 +586,17 @@ export default function StreamingChat() {
             </button>
           )}
         </div>
+        </nav>
       </header>
 
       {/* ── Messages Container (Mobile Momentum & Overscroll Contained) ── */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
+        role="log"
+        aria-label="Chat conversation"
+        aria-live="polite"
+        aria-relevant="additions text"
         className="flex-1 overflow-y-auto overscroll-contain-y px-3 sm:px-6 py-4 space-y-4 scroll-smooth scrollbar-thin scrollbar-thumb-zinc-800"
       >
         {/* Designed Empty State with Instant-Submit Suggestions */}
@@ -697,6 +703,7 @@ export default function StreamingChat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isGenerating ? "Mine AI is generating…" : "Message Mine AI… (Enter to submit, Shift+Enter for newline)"}
+              aria-label="Message Mine AI"
               disabled={false}
               className="flex-1 resize-none bg-transparent px-2.5 py-1.5 text-base sm:text-sm text-zinc-100 placeholder:text-zinc-500 outline-none leading-relaxed max-h-40 min-h-[38px] scrollbar-thin scrollbar-thumb-zinc-700"
             />

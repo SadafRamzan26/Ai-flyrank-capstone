@@ -12,11 +12,11 @@ import {
 } from "lucide-react";
 
 interface ChatEmptyStateProps {
-  onSelectSuggestion: (promptText: string) => void;
+  onSelectSuggestion: (promptText: string) => void | Promise<void>;
 }
 
 interface SuggestionItem {
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   category: string;
   badgeColor: string;

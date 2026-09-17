@@ -15,7 +15,7 @@ export default function MessageSkeleton() {
       </div>
 
       {/* ── Message Bubble Geometry Match (Zero CLS) ───────────────── */}
-      <div className="relative w-full max-w-[88%] sm:max-w-[82%] px-3.5 py-3 sm:px-4 sm:py-3.5 rounded-2xl rounded-tl-sm bg-zinc-900/90 border border-zinc-800/90 shadow-sm space-y-3">
+      <div className="relative w-full max-w-[88%] sm:max-w-[82%] px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl rounded-tl-sm bg-zinc-900/90 border border-zinc-800/90 shadow-sm space-y-3">
         {/* Shimmering Status Badge */}
         <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2 mb-1">
           <div className="flex items-center gap-2">
